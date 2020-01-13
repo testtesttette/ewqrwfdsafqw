@@ -23,12 +23,15 @@ class GlobalVariables(Enum):
     # 以下是具体输出的内容，使用相对上述根目录的路径
     plus_sectors_dir = 4
     reduce_sectors_dir = 5
-    scheduel_list_dir = 6
+    translation_sectors_dir = 6
+    scheduel_list_dir = 7
 
     # 开始时间
     # 格式：'2019-06-18 00:00'
-    start_time = 7
+    start_time = 8
     # 预测数据的开始时间
-    forecast_start_time = 8
-    # 预测时长，以小时计
-    forecast_time_length = 9
+    forecast_start_time = 9
+    # 预测时长，以天计
+    forecast_day_length = 10
+    # 减容系数，<=1
+    reduce_volume_factor = 11

@@ -11,41 +11,46 @@ from functools import partial
 from utils.exception import *
 from utils.util import *
 
-# 以下路径依次为：排除扇区、静态表、扩容扇区、减容扇区、平移扇区、输出目录
+import __config__ as cf
+from __global__ import GlobalVariables
+
+# TODO：静态表怎么筛选，写个程序or人工？
 # 排除扇区直接从静态表中手动筛选即可
 # 当前筛选规则：
 #   ‘县市’列为拱墅区
 #   ‘覆盖区域（场景）’列为火车站或高铁或高速公路
 # 将满足条件的行的'小区中文名称'列去重后复制到一个新csv文件即可
-# EXCLUDE_SECTORS_FILE_PATH = r'扇区调度/public_data/GS_exclude_sector_0715.csv'
-# STATIC_FILE_PATH = r'data/0715_Static_Origin.csv'
-# PATH_PLUS = r'扇区调度/0731/data/相关数据/扩容扇区/'
-# PATH_REDUCE = r'扇区调度/0731/data/相关数据/减容扇区/'
-# PATH_BUSY_BEFORE = r'扇区调度/public_data/19_25负载平移结果/'
-# reduce_volume_times = 1.2
+
+# EXCLUDE_SECTORS_FILE_PATH = r''
+# STATIC_FILE_PATH = r'/home/wm775825/达州-0512-0624-数据/静态表/0512-更新-静态表.csv'
+# PATH_PLUS = r'/home/wm775825/达州-0512-0624-数据/DZ_0618_0624_优化结果-加限制/预测扩容扇区/'
+# PATH_REDUCE = r'/home/wm775825/达州-0512-0624-数据/DZ_0618_0624_优化结果-加限制/预测减容扇区/'
+# PATH_BUSY_BEFORE = r'/home/wm775825/达州-0512-0624-数据/DZ_0618_0624_优化结果-加限制/负载平移结果-扩容扇区/'
+# reduce_volume_times = 0.99
 # PATH_OUTPUT = str(reduce_volume_times) + r'p/'
-
-# TODO：以下路径名要放到项目全局变量里面去
-# TODO：以下路径名
-# TODO：静态表怎么筛选，写个程序or人工？
-# TODO：扩减容扇区目录、平移扇区目录存放到哪去？怎么命名？
-# TODO：
-EXCLUDE_SECTORS_FILE_PATH = r''
-STATIC_FILE_PATH = r'/home/wm775825/达州-0512-0624-数据/静态表/0512-更新-静态表.csv'
-PATH_PLUS = r'/home/wm775825/达州-0512-0624-数据/DZ_0618_0624_优化结果-加限制/预测扩容扇区/'
-PATH_REDUCE = r'/home/wm775825/达州-0512-0624-数据/DZ_0618_0624_优化结果-加限制/预测减容扇区/'
-PATH_BUSY_BEFORE = r'/home/wm775825/达州-0512-0624-数据/DZ_0618_0624_优化结果-加限制/负载平移结果-扩容扇区/'
-reduce_volume_times = 0.99
-PATH_OUTPUT = str(reduce_volume_times) + r'p/'
-
 # 预测开始时间、天数以及对应的小时数
-START_TIME = '2019-06-18 00:00'
-TIME_LEN = 7
-FORECAST_HOUR_LENGTH = TIME_LEN * 24
+# START_TIME = '2019-06-18 00:00'
+
+
+_STATIC_FILE_PATH = cf.glv_get(GlobalVariables.static_file_path)
+_EXCLUDE_SECTORS_FILE_PATH = cf.glv_get(GlobalVariables.exclude_sectors_file_path)
+_PATH_PLUS = os.path.join(cf.glv_get(GlobalVariables.output_root_dir),
+                          cf.glv_get(GlobalVariables.plus_sectors_dir))
+_PATH_REDUCE = os.path.join(cf.glv_get(GlobalVariables.output_root_dir),
+                            cf.glv_get(GlobalVariables.reduce_sectors_dir))
+_PATH_TRANSLATE = os.path.join(cf.glv_get(GlobalVariables.output_root_dir),
+                               cf.glv_get(GlobalVariables.translation_sectors_dir))
+_PATH_SCHEDULE = os.path.join(cf.glv_get(GlobalVariables.output_root_dir),
+                              cf.glv_get(GlobalVariables.scheduel_list_dir))
+_START_TIME = cf.glv_get(GlobalVariables.forecast_start_time)
+_FORECAST_DAY_LENGTH = cf.glv_get(GlobalVariables.forecast_day_length)
+_FORECAST_HOUR_LENGTH = _FORECAST_DAY_LENGTH * 24
+_REDUCE_VOLUME_FACTOR = cf.glv_get(GlobalVariables.reduce_volume_factor)
+
 
 # fb_vector中各频段先后顺序为:
 # A,D/D1,D2,D3,F1,F2,E1,E2,E3,FDD900,FDD1800,FDD,FDDNB/NB,DCS1800,GSM900
-frequency_band_index_dict = {
+_FREQUENCY_BAND_INDEX_DICT = {
     'D': 0, 'D1': 0, 'D2': 1, 'D3': 2,
     'F1': 3, 'F2': 4,
     'FDD1800': 5, 'FDD-1800': 5,
@@ -57,8 +62,8 @@ frequency_band_index_dict = {
     # 'DCS1800': 13,
     # 'GSM900': 14
 }
-fb_length = len(frequency_band_index_dict)
-fb_list = ['D1', 'D2', 'D3', 'F1', 'F2', 'FDD1800', 'A', 'FDD900', 'E1', 'E2', 'E3']
+_FB_LENGTH = len(_FREQUENCY_BAND_INDEX_DICT)
+_FB_LIST = ['D1', 'D2', 'D3', 'F1', 'F2', 'FDD1800', 'A', 'FDD900', 'E1', 'E2', 'E3']
 
 
 def load_need_and_active_data():
@@ -68,15 +73,10 @@ def load_need_and_active_data():
     :return:
     """
     have_inited = defaultdict(bool)
-    need_fb_dict = defaultdict(lambda: np.zeros((FORECAST_HOUR_LENGTH, fb_length), dtype=bool))
-    active_fb_dict = defaultdict(lambda: np.zeros(fb_length, dtype=bool))
+    need_fb_dict = defaultdict(lambda: np.zeros((_FORECAST_HOUR_LENGTH, _FB_LENGTH), dtype=bool))
+    active_fb_dict = defaultdict(lambda: np.zeros(_FB_LENGTH, dtype=bool))
 
-    # 扩减容扇区所在目录
-    path_reduce = PATH_REDUCE
-    path_plus = PATH_PLUS
-
-    start_time = START_TIME
-    time_begin = parse(start_time)
+    time_begin = parse(_START_TIME)
 
     def do_loading(path: str):
         for file_name in os.listdir(path):
@@ -91,22 +91,22 @@ def load_need_and_active_data():
                     if line_index == 0:
                         active_fbs = line[4].split(',')
                         for fb in active_fbs:
-                            active_fb_dict[sector_name][frequency_band_index_dict[fb]] = True
+                            active_fb_dict[sector_name][_FREQUENCY_BAND_INDEX_DICT[fb]] = True
                         if not have_inited[sector_name]:
-                            for index in range(FORECAST_HOUR_LENGTH):
+                            for index in range(_FORECAST_HOUR_LENGTH):
                                 need_fb_dict[sector_name][index] = active_fb_dict[sector_name].copy()
                             have_inited[sector_name] = True
                     time_now = parse(line[0])
                     time_delta = time_now - time_begin
                     index = time_delta.days * 24 + time_delta.seconds // 3600
                     need_fbs = line[2].split(',')
-                    temp_vector = np.zeros(fb_length, dtype=bool)
+                    temp_vector = np.zeros(_FB_LENGTH, dtype=bool)
                     for fb in need_fbs:
-                        temp_vector[frequency_band_index_dict[fb]] = True
+                        temp_vector[_FREQUENCY_BAND_INDEX_DICT[fb]] = True
                     need_fb_dict[sector_name][index] = temp_vector.copy()
 
-    do_loading(path_reduce)
-    do_loading(path_plus)
+    do_loading(_PATH_REDUCE)
+    do_loading(_PATH_PLUS)
     return need_fb_dict, active_fb_dict, have_inited
 
 
@@ -151,13 +151,13 @@ def read_sector_fb(static_file_path: str, *, ignore_list=None):
             TODO: 加上
             """
             fbs = list(filter(lambda x: x != '' and x not in ignore_list, line[frenquency_band_index].split(',')))
-            fb_vector = np.zeros(fb_length, dtype=bool)
+            fb_vector = np.zeros(_FB_LENGTH, dtype=bool)
             ignore_line = (line[city_index] == '杭州' and line[region_index] != '拱墅') or \
                           line[sector_index].lower().find('mimo') >= 0 or line[sector_index] in sector_fb_dic or \
                           line[frenquency_band_index] == '' or len(fbs) == 0
             if not ignore_line:
                 for fb in fbs:
-                    fb_vector[frequency_band_index_dict[fb]] = True
+                    fb_vector[_FREQUENCY_BAND_INDEX_DICT[fb]] = True
             return ignore_line, fb_vector
 
         for line in reader:
@@ -180,15 +180,15 @@ def load_busy_before_data_and_complete_need_active_dict(need_fb_dict: dict, acti
         f_fbs = ['F1', 'F2']
         if busy_fb in e_fbs:
             for fb in chain(e_fbs, f_fbs):
-                if fb != busy_fb and active_fb_vector[frequency_band_index_dict[fb]] == False:
-                    plus_fb_index = frequency_band_index_dict[fb]
+                if fb != busy_fb and active_fb_vector[_FREQUENCY_BAND_INDEX_DICT[fb]] == False:
+                    plus_fb_index = _FREQUENCY_BAND_INDEX_DICT[fb]
                     break
             else:
                 plus_fb_index = np.where(active_fb_vector == False)[0][0]
         elif busy_fb in f_fbs:
             for fb in f_fbs:
-                if fb != busy_fb and active_fb_vector[frequency_band_index_dict[fb]] == False:
-                    plus_fb_index = frequency_band_index_dict[fb]
+                if fb != busy_fb and active_fb_vector[_FREQUENCY_BAND_INDEX_DICT[fb]] == False:
+                    plus_fb_index = _FREQUENCY_BAND_INDEX_DICT[fb]
                     break
             else:
                 plus_fb_index = np.where(active_fb_vector == False)[0][0]
@@ -196,20 +196,20 @@ def load_busy_before_data_and_complete_need_active_dict(need_fb_dict: dict, acti
             plus_fb_index = np.where(active_fb_vector == False)[0][0]
         return plus_fb_index
 
-    sector_fb_dic = read_sector_fb(STATIC_FILE_PATH)
+    sector_fb_dic = read_sector_fb(_STATIC_FILE_PATH)
 
-    path = PATH_BUSY_BEFORE
+    path = _PATH_TRANSLATE
     busy_before_list = []
 
     # 调整平移扇区需求数
-    time_begin = parse(START_TIME)
+    time_begin = parse(_START_TIME)
     for file_name in os.listdir(path):
         sector_name = file_name[:-4]
         busy_before_list.append(sector_name)
         current_fb_vector = sector_fb_dic[sector_name]
         active_fb_dict[sector_name] = current_fb_vector.copy()
         if not have_inited[sector_name]:
-            for index in range(FORECAST_HOUR_LENGTH):
+            for index in range(_FORECAST_HOUR_LENGTH):
                 need_fb_dict[sector_name][index] = current_fb_vector.copy()
         with open(os.path.join(path, file_name), 'r', encoding='gbk') as csvfile:
             reader = iter(csv.reader(csvfile))
@@ -237,10 +237,10 @@ def load_exclude_sectors():
     源扇区不能为高铁站、火车站...
     :return:
     """
-    if EXCLUDE_SECTORS_FILE_PATH == '':
+    if _EXCLUDE_SECTORS_FILE_PATH == '':
         return []
     exclude_list = []
-    with open(EXCLUDE_SECTORS_FILE_PATH, 'r', encoding="GBK") as csvfile:
+    with open(_EXCLUDE_SECTORS_FILE_PATH, 'r', encoding="GBK") as csvfile:
         reader = csv.reader(csvfile)
         it = iter(reader)
         for line in it:
@@ -313,7 +313,7 @@ def schedule(time, need_matrix, current_num_vector, wait_matrix, frozen, exclude
     candidate_down.sort(key=lambda x: x[1], reverse=True)
 
     # 更新current_num_vector
-    advance_needs = int(reduce_volume_times * advance_needs)
+    advance_needs = int(_REDUCE_VOLUME_FACTOR * advance_needs)
     current_num_vector += temp_wait_vector
     for item in candidate_down:
         if advance_needs == 0:
@@ -402,7 +402,7 @@ def adapt_fbs(time: int, frozen: int, need_fb_tensor: np.array, active_fb_matrix
         temp_vector = need_fb_tensor[sector_index][time] ^ active_fb_matrix[sector_index]
         fb_index = np.where(temp_vector == True)[0][0]
         active_fb_matrix[sector_index][fb_index] = False
-        source_fb_dict[sector_index].append(fb_list[fb_index])
+        source_fb_dict[sector_index].append(_FB_LIST[fb_index])
     for key, value in source_fb_dict.items():
         source_fb_dict[key] = ','.join(value)
 
@@ -410,7 +410,7 @@ def adapt_fbs(time: int, frozen: int, need_fb_tensor: np.array, active_fb_matrix
         temp_vector = need_fb_tensor[sector_index][time + frozen] ^ active_fb_matrix[sector_index]
         fb_index = np.where(temp_vector == True)[0][0]
         active_fb_matrix[sector_index][fb_index] = True
-        dest_fb_dict[sector_index].append(fb_list[fb_index])
+        dest_fb_dict[sector_index].append(_FB_LIST[fb_index])
     for key, value in dest_fb_dict.items():
         dest_fb_dict[key] = ','.join(value)
 
@@ -445,8 +445,8 @@ def start_schedule(frozen=4):
     wait_matrix = np.zeros((len(sector_list), frozen), dtype=int)
 
     # 需要根据预测时间生成日期列表
-    global_time_line = FORECAST_HOUR_LENGTH
-    time_list = generate_time_list(START_TIME, TIME_LEN)
+    global_time_line = _FORECAST_HOUR_LENGTH
+    time_list = generate_time_list(_START_TIME, _FORECAST_DAY_LENGTH)
 
     # 开始生成调度列表，第一个调度时刻时，下一小时在need_fb_dict对应下标为0（例如调度时刻为00:00,那么下一小时为00：00-01：00），故从0开始
     source_large_list = []
@@ -481,7 +481,7 @@ def find_sector(result_list):
 
 def main():
     source_large_list, dest_large_list = start_schedule()
-    output_dir = PATH_OUTPUT
+    output_dir = _PATH_SCHEDULE
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     save_large_list2file(source_large_list, os.path.join(output_dir, '源扇区.csv'),
@@ -496,7 +496,6 @@ def main():
 
 
 def sche():
-    import __config__ as cf
     print(cf.glv_get('static_file_path'))
 
 
