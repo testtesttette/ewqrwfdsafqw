@@ -125,6 +125,10 @@ def read_sector_fb(static_file_path: str, *, ignore_list=None):
         reader = iter(csv.reader(csvfile))
         headers = next(reader)
         try:
+            city_index = headers.index('地市')
+        except KeyError:
+            raise WrongKeyError('地市')
+        try:
             region_index = headers.index('县市')
         except KeyError:
             raise WrongKeyError('县市')
@@ -148,8 +152,9 @@ def read_sector_fb(static_file_path: str, *, ignore_list=None):
             """
             fbs = list(filter(lambda x: x != '' and x not in ignore_list, line[frenquency_band_index].split(',')))
             fb_vector = np.zeros(fb_length, dtype=bool)
-            ignore_line = line[sector_index].lower().find('mimo') >= 0 or \
-                          line[sector_index] in sector_fb_dic or line[frenquency_band_index] == '' or len(fbs) == 0
+            ignore_line = (line[city_index] == '杭州' and line[region_index] != '拱墅') or \
+                          line[sector_index].lower().find('mimo') >= 0 or line[sector_index] in sector_fb_dic or \
+                          line[frenquency_band_index] == '' or len(fbs) == 0
             if not ignore_line:
                 for fb in fbs:
                     fb_vector[frequency_band_index_dict[fb]] = True
@@ -171,17 +176,17 @@ def load_busy_before_data_and_complete_need_active_dict(need_fb_dict: dict, acti
     """
 
     def find_plus_fb_index(busy_fb: str, active_fb_vector: np.array):
-        E_fbs = ['E1', 'E2', 'E3']
-        F_fbs = ['F1', 'F2']
-        if busy_fb in E_fbs:
-            for fb in chain(E_fbs, F_fbs):
+        e_fbs = ['E1', 'E2', 'E3']
+        f_fbs = ['F1', 'F2']
+        if busy_fb in e_fbs:
+            for fb in chain(e_fbs, f_fbs):
                 if fb != busy_fb and active_fb_vector[frequency_band_index_dict[fb]] == False:
                     plus_fb_index = frequency_band_index_dict[fb]
                     break
             else:
                 plus_fb_index = np.where(active_fb_vector == False)[0][0]
-        elif busy_fb in F_fbs:
-            for fb in F_fbs:
+        elif busy_fb in f_fbs:
+            for fb in f_fbs:
                 if fb != busy_fb and active_fb_vector[frequency_band_index_dict[fb]] == False:
                     plus_fb_index = frequency_band_index_dict[fb]
                     break
@@ -420,8 +425,7 @@ def start_schedule(frozen=4):
     """
     # 读取预测负载数据、现网数据、平移扇区和排除扇区
     need_fb_dict, active_fb_dict, have_inited = load_need_and_active_data()
-    busy_before_list = load_busy_before_data_and_complete_need_active_dict(need_fb_dict, active_fb_dict,
-                                                                          have_inited)
+    busy_before_list = load_busy_before_data_and_complete_need_active_dict(need_fb_dict, active_fb_dict, have_inited)
     exclude_list = load_exclude_sectors()
     # 将扇区名和数据分开存储，调度时只使用索引下标，不使用具体扇区名
     sector_list = list(need_fb_dict.keys())

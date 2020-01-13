@@ -1,5 +1,5 @@
 """
-一些全局变量
+一些全局变量的配置接口
 """
 
 
@@ -11,26 +11,26 @@ def init():
     glv = {}
 
 
-def glv_set(name, value):
+def glv_set(key, value):
     """
-
-    :param name:
+    set
+    :param key:
     :param value:
     :return:
     """
     try:
-        glv[name] = value
+        glv[key] = value
     except KeyError:
         pass
 
 
-def glv_get(name):
+def glv_get(key):
     """
-
-    :param name:
+    get
+    :param key:
     :return:
     """
     try:
-        return glv[name]
+        return glv[key]
     except KeyError:
-        return 'can not find ' + name + ' in global variables!'
+        return 'can not find ' + key + ' in global variables!'
