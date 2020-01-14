@@ -11,6 +11,7 @@ import calendar
 import copy
 # import numpy as np
 
+
 # 根据给定的起始时间和持续天数造时间轴
 def generate_time_list_for_gen_result(start_date,num_days):
     # start_date的格式为 2019-03-18 00:00，days为天数，默认从start_date的零点开始生成

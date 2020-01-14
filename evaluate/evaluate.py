@@ -8,7 +8,6 @@ from utils.util import get_set_from_csv, get_set_from_dir
 def evaluate(*, nowadays: str, forecast: str, translate: str):
     """
     评价预测和平移的结果
-    TODO: 如何传入格式
     :param nowadays: 现网高负荷扇区文件/所在目录
     :param forecast: 预测高负荷扇区文件/所在目录
     :param translate: 平移高负荷扇区文件/所在目录

@@ -2,8 +2,7 @@
 import os
 import csv
 import shutil
-import Lib_Load_Forcast
-
+from . import Lib_Load_Forcast
 
 
 # 倒数第二周平移检出高负载小区

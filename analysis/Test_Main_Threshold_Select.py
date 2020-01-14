@@ -1,21 +1,23 @@
 # 调查减容清单里的相关情况，看看天粒度下能否减容，周粒度下能否减容
 
-import Lib_Statistic_Tools
+from . import Lib_Statistic_Tools
+
+import __config__ as cf
+from __global__ import GlobalVariables
 
 
+def final_extend_decrease_by_threshold():
 
-if __name__=="__main__":
+    forecast_decrease_dir = cf.glv_get(GlobalVariables.decreased_sector_by_forecast_save_dir)
+    forecast_extend_dir = cf.glv_get(GlobalVariables.extend_sector_by_forecast_save_dir)
 
-    forecast_decrease_dir = r'C:\projects\IFLYTEK\license\预测减容扇区'
-    forecast_extend_dir = r'C:\projects\IFLYTEK\license\预测扩容扇区'
+    recent_feature_extend_dir = cf.glv_get(GlobalVariables.recent_load_select_save_dir)
 
-    recent_feature_extend_dir = r'C:\projects\IFLYTEK\license\扩容清单-基于近期负载特征优化'
+    days_threshold_for_extend = cf.glv_get(GlobalVariables.days_threshold_for_extend)
 
-    days_threshold_for_extend = 5
+    save_threshold_decrease_dir = cf.glv_get(GlobalVariables.save_threshold_decrease_dir)
 
-    save_threshold_decrease_dir = r'C:\projects\IFLYTEK\license\设定阈值的减容结果'
-
-    save_threshold_extend_dir = r'C:\projects\IFLYTEK\license\设定阈值的扩容结果'
+    save_threshold_extend_dir = cf.glv_get(GlobalVariables.save_threshold_extend_dir)
 
     Lib_Statistic_Tools.threshold_decrease(forecast_decrease_dir,
                        save_threshold_decrease_dir)

@@ -32,6 +32,7 @@ from __global__ import GlobalVariables
 # START_TIME = '2019-06-18 00:00'
 
 
+# TODO: 修改对应的路径名
 _STATIC_FILE_PATH = cf.glv_get(GlobalVariables.static_file_path)
 _EXCLUDE_SECTORS_FILE_PATH = cf.glv_get(GlobalVariables.exclude_sectors_file_path)
 _PATH_PLUS = os.path.join(cf.glv_get(GlobalVariables.output_root_dir),

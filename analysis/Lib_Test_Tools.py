@@ -1,11 +1,9 @@
 # 关于各种负载统计和分析的库
 import os
 import csv
-import shutil
-import Lib_Load_Forcast
+from . import Lib_Load_Forcast
 
 
-#
 def CGI_loading_padding(ori_CGI_load_dir,
                         ori_sector_load_dir,
                         refine_CGI_load_dir):

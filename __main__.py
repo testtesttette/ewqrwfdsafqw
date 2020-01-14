@@ -5,23 +5,26 @@ from __global__ import GlobalVariables
 # TODO：全局变量定义在下面
 cf.init()
 
-cf.glv_set(GlobalVariables.static_file_path, r'/home/wm775825/达州-0512-0624-数据/静态表/0512-更新-静态表.csv')
-cf.glv_set(GlobalVariables.dynamic_data_dir, r'')
-cf.glv_set(GlobalVariables.exclude_sectors_file_path, r'')
-
 # TODO：根目录名字？
-cf.glv_set(GlobalVariables.output_root_dir, r'')
-cf.glv_set(GlobalVariables.plus_sectors_dir, r'plus')
-cf.glv_set(GlobalVariables.reduce_sectors_dir, r'reduce')
-cf.glv_set(GlobalVariables.translation_sectors_dir, r'translate')
-cf.glv_set(GlobalVariables.scheduel_list_dir, r'schedule')
-
-# TODO：这些时间相关的参数从输入得到还是从csv中读出？
-cf.glv_set(GlobalVariables.start_time, '')
-cf.glv_set(GlobalVariables.forecast_start_time, '')
-cf.glv_set(GlobalVariables.forecast_day_length, 0)
-
 cf.glv_set(GlobalVariables.reduce_volume_factor, 1.0)
+
+cf.glv_set(GlobalVariables.MERGE_STATIC_PATH, r"C:\Users\USTC\Desktop\合并测试\DZ_Merge_Static.csv")
+cf.glv_set(GlobalVariables.CLEAN_FILE_PATH, r"C:\Users\USTC\Desktop\合并测试\Sector_Clean")
+cf.glv_set(GlobalVariables.SAVE_CGI_INFO_PATH, r"C:\Users\USTC\Desktop\合并测试\CGI_Clean")
+cf.glv_set(GlobalVariables.SAVE_PATH_HIGHLOAD, r"C:\Users\USTC\Desktop\合并测试\DZ_0512_0624_highload_cgi_list.csv")
+cf.glv_set(GlobalVariables.SAVE_PATH_ABNORMAL, r"C:\Users\USTC\Desktop\合并测试\DZ_0512_0624_abnormal_cgi_list.csv")
+cf.glv_set(GlobalVariables.save_forecast_file_rootdir, r"C:\Users\USTC\Desktop\合并测试\Forecast")
+
+#
+cf.glv_set(GlobalVariables.caculate_forecast_sector_license_save_dir, r"C:\Users\USTC\Desktop\合并测试\扇区需求计算结果")
+cf.glv_set(GlobalVariables.extend_sector_by_forecast_save_dir, r"C:\Users\USTC\Desktop\合并测试\预测扩容扇区")
+cf.glv_set(GlobalVariables.decreased_sector_by_forecast_save_dir, r"C:\Users\USTC\Desktop\合并测试\预测减容扇区")
+
+cf.glv_set(GlobalVariables.recent_load_select_save_dir, r"C:\Users\USTC\Desktop\合并测试\基于近期负载特征优化的扩容扇区")
+
+cf.glv_set(GlobalVariables.save_threshold_extend_dir, r'C:\projects\IFLYTEK\license\设定阈值的扩容结果')
+cf.glv_set(GlobalVariables.save_threshold_decrease_dir, r'C:\projects\IFLYTEK\license\设定阈值的减容结果')
+cf.glv_set(GlobalVariables.days_threshold_for_extend, 5)
 
 
 def complete_config():
@@ -29,25 +32,42 @@ def complete_config():
     TODO: 根据传入的参数完善相关配置
     :return:
     """
-    cf.glv_set(GlobalVariables.static_file_path, r'/home/wm775825/input/0715_Static_Origin.csv')
-    cf.glv_set(GlobalVariables.exclude_sectors_file_path, r'/home/wm775825/input/GS_exclude_sector_0715.csv')
+    # cf.glv_set(GlobalVariables.static_file_path, r'/home/wm775825/input/0715_Static_Origin.csv')
+    # cf.glv_set(GlobalVariables.exclude_sectors_file_path, r'/home/wm775825/input/GS_exclude_sector_0715.csv')
+    #
+    # cf.glv_set(GlobalVariables.output_root_dir, r'/home/wm775825/output/')
+    #
+    # cf.glv_set(GlobalVariables.start_time, '')
+    # cf.glv_set(GlobalVariables.forecast_start_time, '2019-08-02 00:00')
+    # cf.glv_set(GlobalVariables.forecast_day_length, 7)
+    cf.glv_set(GlobalVariables.STATIC_DIR_PATH, r'C:\Users\USTC\Desktop\合并测试\静态表')
+    cf.glv_set(GlobalVariables.STATIC_FILE_PATH, r'C:\Users\USTC\Desktop\合并测试\静态表\0512-更新-静态表.csv')
+    cf.glv_set(GlobalVariables.PRB_STATIC_FILE_PATH, r'C:\Users\USTC\Desktop\合并测试\Prb_Static.csv')
+    cf.glv_set(GlobalVariables.DYNAMIC_FILE_PATH, r'C:\Users\USTC\Desktop\合并测试\动态表')
 
-    cf.glv_set(GlobalVariables.output_root_dir, r'/home/wm775825/output/')
+    cf.glv_set(GlobalVariables.dynamic_start_date, "2019-05-12 00:00")
+    cf.glv_set(GlobalVariables.dynamic_days, 44)
+    cf.glv_set(GlobalVariables.training_days, 37)
+    cf.glv_set(GlobalVariables.forecast_start_date, "2019-06-18 00:00")
+    cf.glv_set(GlobalVariables.forecast_days, 7)
 
-    cf.glv_set(GlobalVariables.start_time, '')
-    cf.glv_set(GlobalVariables.forecast_start_time, '2019-08-02 00:00')
-    cf.glv_set(GlobalVariables.forecast_day_length, 7)
+    cf.glv_set(GlobalVariables.start_analyze_date, '2019-06-18 00:00')
+    cf.glv_set(GlobalVariables.analyze_days, 7)
 
 
 def main():
     complete_config()
-    # TODO：程序运行时，需要开辟一个新文件夹?
-    # TODO：考虑从命令行接受参数，还是硬编码好需要的所有数据的layout?
     # TODO：依次调用各个子包下的入口函数
-    # TODO：入口函数名不强制命名为main，可根据模块功能来
     # TODO：具体模块的导入要在complete_config函数后边
-    from schedule.schedule import main
-    main()
+    from forecast.Data_Preprocessing_Forecast_Main import data_preprocessing_and_forecast
+    from analysis.Test_Main_Gen_Schedule_Input import extend_decrease_by_forecast
+    from analysis.Test_Main_Recent_Select import extend_by_recent_feature_extract
+    from analysis.Test_Main_Threshold_Select import final_extend_decrease_by_threshold
+
+    data_preprocessing_and_forecast()
+    extend_decrease_by_forecast()
+    extend_by_recent_feature_extract()
+    final_extend_decrease_by_threshold()
 
 
 if __name__ == '__main__':
