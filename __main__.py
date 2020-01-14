@@ -46,8 +46,8 @@ def main():
     # TODO：依次调用各个子包下的入口函数
     # TODO：入口函数名不强制命名为main，可根据模块功能来
     # TODO：具体模块的导入要在complete_config函数后边
-    from schedule.schedule import sche
-    sche()
+    from schedule.schedule import main
+    main()
 
 
 if __name__ == '__main__':

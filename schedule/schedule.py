@@ -113,12 +113,13 @@ def load_need_and_active_data():
 def read_sector_fb(static_file_path: str, *, ignore_list=None):
     """
     读取静态表中，扇区名字和其绑定的频段
+    为什么需要这个函数？因为很多平移扇区没有出现在扩容/减容扇区中，只能到静态表中去读现网配置
     :param static_file_path: 静态表路径
     :param ignore_list: 目前不考虑的频段的列表
     :return:
     """
     if not ignore_list:
-        ignore_list = ['DCS1800', 'GSM900', 'NB', 'FDD']
+        ignore_list = ['DCS1800', 'GSM900', 'NB', 'FDD', 'FDD-NB']
 
     sector_fb_dic = {}
     with open(static_file_path, 'r', encoding='gbk') as csvfile:
@@ -134,9 +135,10 @@ def read_sector_fb(static_file_path: str, *, ignore_list=None):
             raise WrongKeyError('县市')
         try:
             # TODO: 扇区/小区名字定一下
-            sector_index = headers.index('扇区中文名称')
+            # TODO：杭州叫小区，达州叫扇区
+            sector_index = headers.index('小区中文名称')
         except KeyError:
-            raise WrongKeyError('扇区中文名称')
+            raise WrongKeyError('小区中文名称')
         try:
             frenquency_band_index = headers.index('全量共址频段')
         except KeyError:
@@ -148,7 +150,6 @@ def read_sector_fb(static_file_path: str, *, ignore_list=None):
             当前忽略某一扇区的条件:
                 杭州市但不是拱墅区 or 扇区为3DMIMO扇区 or dict中已有该扇区 or 全量共址频段列为空
                 or 全量共址频段列除掉某些频段之后为空
-            TODO: 加上
             """
             fbs = list(filter(lambda x: x != '' and x not in ignore_list, line[frenquency_band_index].split(',')))
             fb_vector = np.zeros(_FB_LENGTH, dtype=bool)
@@ -176,6 +177,12 @@ def load_busy_before_data_and_complete_need_active_dict(need_fb_dict: dict, acti
     """
 
     def find_plus_fb_index(busy_fb: str, active_fb_vector: np.array):
+        """
+        平移扇区需要扩容一个频段，该函数做的就是找到扩容的频段。
+        :param busy_fb: 之前繁忙时的频段
+        :param active_fb_vector: 现网配置
+        :return:
+        """
         e_fbs = ['E1', 'E2', 'E3']
         f_fbs = ['F1', 'F2']
         if busy_fb in e_fbs:
@@ -493,10 +500,6 @@ def main():
     dest_num = len(find_sector(dest_large_list))
     print('源扇区{num_1}个，目的扇区{num_2}个，总计{num_3}个'.format(num_1=source_num, num_2=dest_num, num_3=source_num + dest_num))
     print('-------------------------------------')
-
-
-def sche():
-    print(cf.glv_get('static_file_path'))
 
 
 if __name__ == '__main__':
