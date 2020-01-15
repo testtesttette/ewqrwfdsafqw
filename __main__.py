@@ -7,26 +7,38 @@ import os
 # TODO：全局变量定义在下面
 cf.init()
 
-# TODO：根目录名字？
-cf.glv_set(GlobalVariables.reduce_volume_factor, 1.0)
+cf.glv_set(GlobalVariables.global_tmp, r'./tmp')
+cf.glv_set(GlobalVariables.MERGE_STATIC_PATH,
+           os.path.join(cf.glv_get(GlobalVariables.global_tmp), "DZ_Merge_Static.csv"))
+cf.glv_set(GlobalVariables.CLEAN_FILE_PATH,
+           os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"Sector_Clean"))
+cf.glv_set(GlobalVariables.SAVE_CGI_INFO_PATH,
+           os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"CGI_Clean"))
+cf.glv_set(GlobalVariables.SAVE_PATH_HIGHLOAD,
+           os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"DZ_0512_0624_highload_cgi_list.csv"))
+cf.glv_set(GlobalVariables.SAVE_PATH_ABNORMAL,
+           os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"DZ_0512_0624_abnormal_cgi_list.csv"))
+cf.glv_set(GlobalVariables.save_forecast_file_rootdir,
+           os.path.join(cf.glv_get(GlobalVariables.global_tmp), r'Forecast'))
 
-cf.glv_set(GlobalVariables.global_tmp , r'./tmp')
-cf.glv_set(GlobalVariables.MERGE_STATIC_PATH, os.path.join(cf.glv_get(GlobalVariables.global_tmp), "DZ_Merge_Static.csv"))
-cf.glv_set(GlobalVariables.CLEAN_FILE_PATH, os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"Sector_Clean"))
-cf.glv_set(GlobalVariables.SAVE_CGI_INFO_PATH, os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"CGI_Clean"))
-cf.glv_set(GlobalVariables.SAVE_PATH_HIGHLOAD, os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"DZ_0512_0624_highload_cgi_list.csv"))
-cf.glv_set(GlobalVariables.SAVE_PATH_ABNORMAL, os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"DZ_0512_0624_abnormal_cgi_list.csv"))
-cf.glv_set(GlobalVariables.save_forecast_file_rootdir, os.path.join(cf.glv_get(GlobalVariables.global_tmp), r'Forecast'))
+cf.glv_set(GlobalVariables.caculate_forecast_sector_license_save_dir,
+           os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"扇区需求计算结果"))
+cf.glv_set(GlobalVariables.extend_sector_by_forecast_save_dir,
+           os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"预测扩容扇区"))
+cf.glv_set(GlobalVariables.decreased_sector_by_forecast_save_dir,
+           os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"预测减容扇区"))
+cf.glv_set(GlobalVariables.recent_load_select_save_dir,
+           os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"基于近期负载特征优化的扩容扇区"))
+cf.glv_set(GlobalVariables.save_threshold_extend_dir,
+           os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"设定阈值的扩容结果"))
+cf.glv_set(GlobalVariables.save_threshold_decrease_dir,
+           os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"设定阈值的减容结果"))
+cf.glv_set(GlobalVariables.schedule_dir,
+           os.path.join(cf.glv_get(GlobalVariables.global_tmp), r'schedule'))
 
-cf.glv_set(GlobalVariables.caculate_forecast_sector_license_save_dir, os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"扇区需求计算结果"))
-cf.glv_set(GlobalVariables.extend_sector_by_forecast_save_dir, os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"预测扩容扇区"))
-cf.glv_set(GlobalVariables.decreased_sector_by_forecast_save_dir, os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"预测减容扇区"))
-cf.glv_set(GlobalVariables.recent_load_select_save_dir, os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"基于近期负载特征优化的扩容扇区"))
-cf.glv_set(GlobalVariables.save_threshold_extend_dir, os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"设定阈值的扩容结果"))
-cf.glv_set(GlobalVariables.save_threshold_decrease_dir, os.path.join(cf.glv_get(GlobalVariables.global_tmp), r"设定阈值的减容结果"))
+
 cf.glv_set(GlobalVariables.days_threshold_for_extend, 5)
-
-cf.glv_set(GlobalVariables.schedule_dir, 'schedule')
+cf.glv_set(GlobalVariables.reduce_volume_factor, 1.0)
 
 
 def complete_config():

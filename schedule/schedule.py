@@ -1,10 +1,8 @@
 """
 调度程序，用于给出小时级别的调度清单。
-本程序目前只提供测试版本（杭州地区），如达州地区有需要，再行修改。
 """
 
 from collections import defaultdict
-from itertools import chain
 import numpy as np
 from functools import partial
 
@@ -36,7 +34,6 @@ from __global__ import GlobalVariables
 _EXCLUDE_SECTORS_FILE_PATH = r''
 _PATH_PLUS = cf.glv_get(GlobalVariables.save_threshold_extend_dir)
 _PATH_REDUCE = cf.glv_get(GlobalVariables.save_threshold_decrease_dir)
-_PATH_TRANSLATE = cf.glv_get(GlobalVariables.recent_load_select_save_dir)
 _PATH_SCHEDULE = os.path.join(cf.glv_get(GlobalVariables.output_root_dir),
                               cf.glv_get(GlobalVariables.scheduel_list_dir))
 _START_TIME = cf.glv_get(GlobalVariables.forecast_start_date)
@@ -73,9 +70,8 @@ def load_need_and_active_data():
     need_fb_dict = defaultdict(lambda: np.zeros((_FORECAST_HOUR_LENGTH, _FB_LENGTH), dtype=bool))
     active_fb_dict = defaultdict(lambda: np.zeros(_FB_LENGTH, dtype=bool))
 
-    time_begin = parse(_START_TIME)
-
     def do_loading(path: str):
+        time_begin = parse(_START_TIME)
         for file_name in os.listdir(path):
             # 去掉“.csv”，剩余部分为扇区名
             sector_name = file_name[:-4]
@@ -86,8 +82,7 @@ def load_need_and_active_data():
                     # 利用第一行的数据初始化现网数据（因为每一行的该列都是相同的）
                     # 对于扩减容列表中没有的时刻，其需求数与现网数据相同，可使用现网数据进行填充
                     if line_index == 0:
-                        active_fbs = line[4].split(',')
-                        for fb in active_fbs:
+                        for fb in line[4].split(','):
                             active_fb_dict[sector_name][_FREQUENCY_BAND_INDEX_DICT[fb]] = True
                         if not have_inited[sector_name]:
                             for index in range(_FORECAST_HOUR_LENGTH):
@@ -96,51 +91,14 @@ def load_need_and_active_data():
                     time_now = parse(line[0])
                     time_delta = time_now - time_begin
                     index = time_delta.days * 24 + time_delta.seconds // 3600
-                    need_fbs = line[2].split(',')
                     temp_vector = np.zeros(_FB_LENGTH, dtype=bool)
-                    for fb in need_fbs:
+                    for fb in line[2].split(','):
                         temp_vector[_FREQUENCY_BAND_INDEX_DICT[fb]] = True
                     need_fb_dict[sector_name][index] = temp_vector.copy()
 
     do_loading(_PATH_REDUCE)
     do_loading(_PATH_PLUS)
-    return need_fb_dict, active_fb_dict, have_inited
-
-
-def load_busy_before_data_and_complete_need_active_dict(need_fb_dict: dict, active_fb_dict: dict, have_inited: dict):
-    """
-    上周（或者另外自定义的时间段）出现高负荷的扇区，称为平移扇区，在调度时不能对其减容，反而还要进行扩容。
-    读入平移扇区数据，并将其汇总到need_fb_dict和active_fb_dict中。
-    这部分扇区可能不在扩容扇区目录下，因此其现网数据需要从静态表中读取。
-    返回平移扇区列表，以供减容时进行排查。
-    """
-    path = _PATH_TRANSLATE
-    busy_before_list = []
-
-    # 调整平移扇区需求数
-    time_begin = parse(_START_TIME)
-    for file_name in os.listdir(path):
-        sector_name = file_name[:-4]
-        busy_before_list.append(sector_name)
-        with open(os.path.join(path, file_name), 'r', encoding='gbk') as csvfile:
-            reader = iter(csv.reader(csvfile))
-            next(reader)
-            for row_index, line in enumerate(reader):
-                current_fb_vector = np.zeros(_FB_LENGTH, dtype=bool)
-                if row_index == 0:
-                    for fb in line[3].split(','):
-                        current_fb_vector[_FREQUENCY_BAND_INDEX_DICT[fb]] = True
-                    active_fb_dict[sector_name] = current_fb_vector.copy()
-                    if not have_inited[sector_name]:
-                        for index in range(_FORECAST_HOUR_LENGTH):
-                            need_fb_dict[sector_name][index] = current_fb_vector.copy()
-
-                time_now = parse(line[0])
-                time_delta = time_now - time_begin
-                index = time_delta.days * 24 + time_delta.seconds // 3600
-                for fb in line[5].split(','):
-                    need_fb_dict[sector_name][index][_FREQUENCY_BAND_INDEX_DICT[fb]] = True
-    return busy_before_list
+    return need_fb_dict, active_fb_dict
 
 
 def load_exclude_sectors():
@@ -159,7 +117,7 @@ def load_exclude_sectors():
     return exclude_list
 
 
-def schedule(time, need_matrix, current_num_vector, wait_matrix, frozen, exclude_index_list, busy_index_before_list):
+def schedule(time, need_matrix, current_num_vector, wait_matrix, frozen, exclude_index_list):
     """
     进行time时刻的调度任务
     :param time: 当前时刻
@@ -168,7 +126,6 @@ def schedule(time, need_matrix, current_num_vector, wait_matrix, frozen, exclude
     :param wait_matrix:
     :param frozen:
     :param exclude_index_list:
-    :param busy_index_before_list:
     :return:
     """
     # 根据各个扇区当前license数量和L小时内变换wait_matrix计算L小时后应该有多少license的列表advance_list
@@ -188,7 +145,7 @@ def schedule(time, need_matrix, current_num_vector, wait_matrix, frozen, exclude
         current = current_num_vector[index]
         # 可能能拆的扇区:
         if load < advance:
-            if index in exclude_index_list or index in busy_index_before_list:
+            if index in exclude_index_list:
                 continue
             # num为某小时该扇区预计绑定的license数
             # min_surplus为某小时多余license的最小值
@@ -335,8 +292,7 @@ def start_schedule(frozen=4):
     :return:
     """
     # 读取预测负载数据、现网数据、平移扇区和排除扇区
-    need_fb_dict, active_fb_dict, have_inited = load_need_and_active_data()
-    busy_before_list = load_busy_before_data_and_complete_need_active_dict(need_fb_dict, active_fb_dict, have_inited)
+    need_fb_dict, active_fb_dict = load_need_and_active_data()
     exclude_list = load_exclude_sectors()
     # 将扇区名和数据分开存储，调度时只使用索引下标，不使用具体扇区名
     sector_list = list(need_fb_dict.keys())
@@ -347,7 +303,6 @@ def start_schedule(frozen=4):
     need_matrix = need_fb_tensor.sum(axis=2)  # sector * time_len
     active_vector = active_fb_matrix.sum(axis=1)  # sector * 1
     exclude_index_list = [sector_list.index(sector) for sector in exclude_list if sector in sector_list]
-    busy_index_before_list = [sector_list.index(sector) for sector in busy_before_list if sector in sector_list]
 
     # 拷贝一份，记录下初始化的数据，用于和调度后的数据进行对比
     init_vector = active_vector.copy()
@@ -366,7 +321,7 @@ def start_schedule(frozen=4):
         if time + frozen >= global_time_line:
             break
         source_list, dest_list = schedule(time, need_matrix, current_num_vector, wait_matrix, frozen,
-                                          exclude_index_list, busy_index_before_list)
+                                          exclude_index_list)
         source_fb_dict, dest_fb_dict = adapt_fbs(time, frozen, need_fb_tensor, active_fb_matrix, source_list, dest_list)
         generate_source_list(time_list[time], source_large_list, sector_list, source_list, source_fb_dict,
                              active_vector, init_vector)

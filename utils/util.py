@@ -4,6 +4,7 @@
 
 import os
 import csv
+import shutil
 from dateutil.parser import parse
 from dateutil.rrule import rrule, HOURLY
 
@@ -59,3 +60,19 @@ def get_set_from_csv(*, csv_name: str, index: int):
         print('Error: ', e)
     finally:
         return ret_set
+
+
+def mkdir(path):
+    """
+    创建路径
+    :param path: 待创建的路径
+    :return: 无
+    """
+    folder=os.path.exists(path)
+
+    if folder:
+        print("检测到已有路径",path,"!将删除该路径下的所有文件和文件夹!")
+        shutil.rmtree(path)
+
+    os.makedirs(path)
+    print("创建了文件夹", path)

@@ -4,7 +4,7 @@ from . import Lib_Statistic_Tools
 
 import __config__ as cf
 from __global__ import GlobalVariables
-
+from utils.util import mkdir
 
 def final_extend_decrease_by_threshold():
 
@@ -16,8 +16,10 @@ def final_extend_decrease_by_threshold():
     days_threshold_for_extend = cf.glv_get(GlobalVariables.days_threshold_for_extend)
 
     save_threshold_decrease_dir = cf.glv_get(GlobalVariables.save_threshold_decrease_dir)
+    mkdir(save_threshold_decrease_dir)
 
     save_threshold_extend_dir = cf.glv_get(GlobalVariables.save_threshold_extend_dir)
+    mkdir(save_threshold_extend_dir)
 
     Lib_Statistic_Tools.threshold_decrease(forecast_decrease_dir,
                        save_threshold_decrease_dir)
