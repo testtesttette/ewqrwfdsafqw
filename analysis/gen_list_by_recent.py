@@ -1,5 +1,4 @@
-from . import Lib_Statistic_Tools
-from . import Lib_Load_Forcast
+from . import analysis_lib
 
 import __config__ as cf
 from __global__ import GlobalVariables
@@ -57,7 +56,7 @@ def extend_by_recent_feature_extract():
     # 指定提取特征的最后一周落在预测结果的时刻的起始位置，例如想验证倒数第二周对最后一周高负载的影响，则before_Load_data设为7，即平移截至时间为“最后一周”之前
     recent_select_start_date = cf.glv_get(GlobalVariables.start_analyze_date)
 
-    history_time_line = Lib_Load_Forcast.generate_time_list_for_gen_result(time_line_start,sustain_days)
+    history_time_line = analysis_lib.generate_time_list_for_gen_result(time_line_start, sustain_days)
 
     last_day_date = history_time_line[-1]
 
@@ -67,10 +66,10 @@ def extend_by_recent_feature_extract():
     else:
         before_Load_data = calculate_history_select_startdate_move_delta(last_day_date,recent_select_start_date)
 
-    Lib_Statistic_Tools.judge_and_save_overload_CGI(src_cleaned_sector_CGI_matching_loading_dir,
-                                                    src_sector_load_dir,
-                                                    overload_CGI_save_dir,
-                                                    time_line_start,
-                                                    sustain_days,
-                                                    before_Load_data,
-                                                    recent_select_start_date)
+    analysis_lib.judge_and_save_overload_CGI(src_cleaned_sector_CGI_matching_loading_dir,
+                                             src_sector_load_dir,
+                                             overload_CGI_save_dir,
+                                             time_line_start,
+                                             sustain_days,
+                                             before_Load_data,
+                                             recent_select_start_date)

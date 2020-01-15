@@ -1,7 +1,7 @@
 # 生成扩减容清单等可供调度算法进行分析的结果
 # 生成的是由预测造成的扩减容
 
-from . import Lib_Load_Forcast
+from . import analysis_lib
 
 import __config__ as cf
 from __global__ import GlobalVariables
@@ -32,12 +32,12 @@ def extend_decrease_by_forecast():
     start_time = cf.glv_get(GlobalVariables.start_analyze_date)
     sustain_days = cf.glv_get(GlobalVariables.analyze_days)
 
-    Lib_Load_Forcast.Forecast_handling_Saver(forecast_loading_dir,
-                                             save_forecast_CGI_num_dir,
-                                             save_extended_sector_dir,
-                                             save_decreased_sector_dir,
-                                             start_time,
-                                             sustain_days)
+    analysis_lib.Forecast_handling_Saver(forecast_loading_dir,
+                                         save_forecast_CGI_num_dir,
+                                         save_extended_sector_dir,
+                                         save_decreased_sector_dir,
+                                         start_time,
+                                         sustain_days)
 
 
 

@@ -1,6 +1,6 @@
 # 调查减容清单里的相关情况，看看天粒度下能否减容，周粒度下能否减容
 
-from . import Lib_Statistic_Tools
+from . import analysis_lib
 
 import __config__ as cf
 from __global__ import GlobalVariables
@@ -21,11 +21,11 @@ def final_extend_decrease_by_threshold():
     save_threshold_extend_dir = cf.glv_get(GlobalVariables.save_threshold_extend_dir)
     mkdir(save_threshold_extend_dir)
 
-    Lib_Statistic_Tools.threshold_decrease(forecast_decrease_dir,
-                       save_threshold_decrease_dir)
+    analysis_lib.threshold_decrease(forecast_decrease_dir,
+                                    save_threshold_decrease_dir)
 
-    Lib_Statistic_Tools.threshold_extend(forecast_extend_dir,
-                     recent_feature_extend_dir,
-                     save_threshold_extend_dir,
-                     days_threshold_for_extend)
+    analysis_lib.threshold_extend(forecast_extend_dir,
+                                  recent_feature_extend_dir,
+                                  save_threshold_extend_dir,
+                                  days_threshold_for_extend)
 
