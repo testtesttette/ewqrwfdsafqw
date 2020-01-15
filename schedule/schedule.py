@@ -33,7 +33,6 @@ from __global__ import GlobalVariables
 
 
 # TODO: 修改对应的路径名
-_STATIC_FILE_PATH = cf.glv_get(GlobalVariables.static_file_path)
 _EXCLUDE_SECTORS_FILE_PATH = cf.glv_get(GlobalVariables.exclude_sectors_file_path)
 _PATH_PLUS = os.path.join(cf.glv_get(GlobalVariables.output_root_dir),
                           cf.glv_get(GlobalVariables.plus_sectors_dir))
@@ -111,64 +110,6 @@ def load_need_and_active_data():
     return need_fb_dict, active_fb_dict, have_inited
 
 
-def read_sector_fb(static_file_path: str, *, ignore_list=None):
-    """
-    读取静态表中，扇区名字和其绑定的频段
-    为什么需要这个函数？因为很多平移扇区没有出现在扩容/减容扇区中，只能到静态表中去读现网配置
-    :param static_file_path: 静态表路径
-    :param ignore_list: 目前不考虑的频段的列表
-    :return:
-    """
-    if not ignore_list:
-        ignore_list = ['DCS1800', 'GSM900', 'NB', 'FDD', 'FDD-NB']
-
-    sector_fb_dic = {}
-    with open(static_file_path, 'r', encoding='gbk') as csvfile:
-        reader = iter(csv.reader(csvfile))
-        headers = next(reader)
-        try:
-            city_index = headers.index('地市')
-        except KeyError:
-            raise WrongKeyError('地市')
-        try:
-            region_index = headers.index('县市')
-        except KeyError:
-            raise WrongKeyError('县市')
-        try:
-            # TODO: 扇区/小区名字定一下
-            # TODO：杭州叫小区，达州叫扇区
-            sector_index = headers.index('小区中文名称')
-        except KeyError:
-            raise WrongKeyError('小区中文名称')
-        try:
-            frenquency_band_index = headers.index('全量共址频段')
-        except KeyError:
-            raise WrongKeyError('全量共址频段')
-
-        def ignore(line):
-            """
-            判断是否跳过该扇区。
-            当前忽略某一扇区的条件:
-                杭州市但不是拱墅区 or 扇区为3DMIMO扇区 or dict中已有该扇区 or 全量共址频段列为空
-                or 全量共址频段列除掉某些频段之后为空
-            """
-            fbs = list(filter(lambda x: x != '' and x not in ignore_list, line[frenquency_band_index].split(',')))
-            fb_vector = np.zeros(_FB_LENGTH, dtype=bool)
-            ignore_line = (line[city_index] == '杭州' and line[region_index] != '拱墅') or \
-                          line[sector_index].lower().find('mimo') >= 0 or line[sector_index] in sector_fb_dic or \
-                          line[frenquency_band_index] == '' or len(fbs) == 0
-            if not ignore_line:
-                for fb in fbs:
-                    fb_vector[_FREQUENCY_BAND_INDEX_DICT[fb]] = True
-            return ignore_line, fb_vector
-
-        for line in reader:
-            ignore_line, fb_vector = ignore(line)
-            if not ignore_line:
-                sector_fb_dic[line[sector_index]] = fb_vector
-    return sector_fb_dic
-
-
 def load_busy_before_data_and_complete_need_active_dict(need_fb_dict: dict, active_fb_dict: dict, have_inited: dict):
     """
     上周（或者另外自定义的时间段）出现高负荷的扇区，称为平移扇区，在调度时不能对其减容，反而还要进行扩容。
@@ -176,36 +117,6 @@ def load_busy_before_data_and_complete_need_active_dict(need_fb_dict: dict, acti
     这部分扇区可能不在扩容扇区目录下，因此其现网数据需要从静态表中读取。
     返回平移扇区列表，以供减容时进行排查。
     """
-
-    def find_plus_fb_index(busy_fb: str, active_fb_vector: np.array):
-        """
-        平移扇区需要扩容一个频段，该函数做的就是找到扩容的频段。
-        :param busy_fb: 之前繁忙时的频段
-        :param active_fb_vector: 现网配置
-        :return:
-        """
-        e_fbs = ['E1', 'E2', 'E3']
-        f_fbs = ['F1', 'F2']
-        if busy_fb in e_fbs:
-            for fb in chain(e_fbs, f_fbs):
-                if fb != busy_fb and active_fb_vector[_FREQUENCY_BAND_INDEX_DICT[fb]] == False:
-                    plus_fb_index = _FREQUENCY_BAND_INDEX_DICT[fb]
-                    break
-            else:
-                plus_fb_index = np.where(active_fb_vector == False)[0][0]
-        elif busy_fb in f_fbs:
-            for fb in f_fbs:
-                if fb != busy_fb and active_fb_vector[_FREQUENCY_BAND_INDEX_DICT[fb]] == False:
-                    plus_fb_index = _FREQUENCY_BAND_INDEX_DICT[fb]
-                    break
-            else:
-                plus_fb_index = np.where(active_fb_vector == False)[0][0]
-        else:
-            plus_fb_index = np.where(active_fb_vector == False)[0][0]
-        return plus_fb_index
-
-    sector_fb_dic = read_sector_fb(_STATIC_FILE_PATH)
-
     path = _PATH_TRANSLATE
     busy_before_list = []
 
@@ -214,29 +125,24 @@ def load_busy_before_data_and_complete_need_active_dict(need_fb_dict: dict, acti
     for file_name in os.listdir(path):
         sector_name = file_name[:-4]
         busy_before_list.append(sector_name)
-        current_fb_vector = sector_fb_dic[sector_name]
-        active_fb_dict[sector_name] = current_fb_vector.copy()
-        if not have_inited[sector_name]:
-            for index in range(_FORECAST_HOUR_LENGTH):
-                need_fb_dict[sector_name][index] = current_fb_vector.copy()
         with open(os.path.join(path, file_name), 'r', encoding='gbk') as csvfile:
             reader = iter(csv.reader(csvfile))
             next(reader)
-            plus_fb_index = None
-            for line in reader:
+            for row_index, line in enumerate(reader):
+                current_fb_vector = np.zeros(_FB_LENGTH, dtype=bool)
+                if row_index == 0:
+                    for fb in line[3].split(','):
+                        current_fb_vector[_FREQUENCY_BAND_INDEX_DICT[fb]] = True
+                    active_fb_dict[sector_name] = current_fb_vector.copy()
+                    if not have_inited[sector_name]:
+                        for index in range(_FORECAST_HOUR_LENGTH):
+                            need_fb_dict[sector_name][index] = current_fb_vector.copy()
+
                 time_now = parse(line[0])
                 time_delta = time_now - time_begin
                 index = time_delta.days * 24 + time_delta.seconds // 3600
-                # 对于平移扇区，规定在其高负荷时刻必须进行扩容
-                # 是否扩减容是根据需求数和现网数进行判断的
-                # 因此，对于这部分扇区，如果在高负荷时刻需求数不超过现网数，则将其需求数修改为现网数 + 1，使其能够扩容。
-                need = need_fb_dict[sector_name][index].sum()
-                if need <= current_fb_vector.sum():
-                    copy_ = current_fb_vector.copy()
-                    if plus_fb_index is None:
-                        plus_fb_index = find_plus_fb_index(line[2], copy_)
-                    copy_[plus_fb_index] = True
-                    need_fb_dict[sector_name][index] = copy_
+                for fb in line[5].split(','):
+                    need_fb_dict[sector_name][index][_FREQUENCY_BAND_INDEX_DICT[fb]] = True
     return busy_before_list
 
 

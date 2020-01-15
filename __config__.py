@@ -33,4 +33,5 @@ def glv_get(key):
     try:
         return glv[key]
     except KeyError:
-        return 'can not find ' + key + ' in global variables!'
+        print('can not find ' + key + ' in global variables!')
+        return None

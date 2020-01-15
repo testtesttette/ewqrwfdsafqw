@@ -22,24 +22,16 @@ cf.glv_set(GlobalVariables.decreased_sector_by_forecast_save_dir, r"C:\Users\UST
 
 cf.glv_set(GlobalVariables.recent_load_select_save_dir, r"C:\Users\USTC\Desktop\合并测试\基于近期负载特征优化的扩容扇区")
 
-cf.glv_set(GlobalVariables.save_threshold_extend_dir, r'C:\projects\IFLYTEK\license\设定阈值的扩容结果')
-cf.glv_set(GlobalVariables.save_threshold_decrease_dir, r'C:\projects\IFLYTEK\license\设定阈值的减容结果')
+cf.glv_set(GlobalVariables.save_threshold_extend_dir, r'C:\Users\USTC\Desktop\合并测试\设定阈值的扩容结果')
+cf.glv_set(GlobalVariables.save_threshold_decrease_dir, r'C:\Users\USTC\Desktop\合并测试\设定阈值的减容结果')
 cf.glv_set(GlobalVariables.days_threshold_for_extend, 5)
 
 
 def complete_config():
     """
-    TODO: 根据传入的参数完善相关配置
+    根据传入的参数完善相关配置
     :return:
     """
-    # cf.glv_set(GlobalVariables.static_file_path, r'/home/wm775825/input/0715_Static_Origin.csv')
-    # cf.glv_set(GlobalVariables.exclude_sectors_file_path, r'/home/wm775825/input/GS_exclude_sector_0715.csv')
-    #
-    # cf.glv_set(GlobalVariables.output_root_dir, r'/home/wm775825/output/')
-    #
-    # cf.glv_set(GlobalVariables.start_time, '')
-    # cf.glv_set(GlobalVariables.forecast_start_time, '2019-08-02 00:00')
-    # cf.glv_set(GlobalVariables.forecast_day_length, 7)
     cf.glv_set(GlobalVariables.STATIC_DIR_PATH, r'C:\Users\USTC\Desktop\合并测试\静态表')
     cf.glv_set(GlobalVariables.STATIC_FILE_PATH, r'C:\Users\USTC\Desktop\合并测试\静态表\0512-更新-静态表.csv')
     cf.glv_set(GlobalVariables.PRB_STATIC_FILE_PATH, r'C:\Users\USTC\Desktop\合并测试\Prb_Static.csv')
