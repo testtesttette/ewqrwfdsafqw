@@ -33,17 +33,14 @@ from __global__ import GlobalVariables
 
 
 # TODO: 修改对应的路径名
-_EXCLUDE_SECTORS_FILE_PATH = cf.glv_get(GlobalVariables.exclude_sectors_file_path)
-_PATH_PLUS = os.path.join(cf.glv_get(GlobalVariables.output_root_dir),
-                          cf.glv_get(GlobalVariables.plus_sectors_dir))
-_PATH_REDUCE = os.path.join(cf.glv_get(GlobalVariables.output_root_dir),
-                            cf.glv_get(GlobalVariables.reduce_sectors_dir))
-_PATH_TRANSLATE = os.path.join(cf.glv_get(GlobalVariables.output_root_dir),
-                               cf.glv_get(GlobalVariables.translation_sectors_dir))
+_EXCLUDE_SECTORS_FILE_PATH = r''
+_PATH_PLUS = cf.glv_get(GlobalVariables.save_threshold_extend_dir)
+_PATH_REDUCE = cf.glv_get(GlobalVariables.save_threshold_decrease_dir)
+_PATH_TRANSLATE = cf.glv_get(GlobalVariables.recent_load_select_save_dir)
 _PATH_SCHEDULE = os.path.join(cf.glv_get(GlobalVariables.output_root_dir),
                               cf.glv_get(GlobalVariables.scheduel_list_dir))
-_START_TIME = cf.glv_get(GlobalVariables.forecast_start_time)
-_FORECAST_DAY_LENGTH = cf.glv_get(GlobalVariables.forecast_day_length)
+_START_TIME = cf.glv_get(GlobalVariables.forecast_start_date)
+_FORECAST_DAY_LENGTH = cf.glv_get(GlobalVariables.forecast_days)
 _FORECAST_HOUR_LENGTH = _FORECAST_DAY_LENGTH * 24
 _REDUCE_VOLUME_FACTOR = cf.glv_get(GlobalVariables.reduce_volume_factor)
 

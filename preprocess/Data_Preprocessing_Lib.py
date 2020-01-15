@@ -4,9 +4,26 @@ import operator
 import calendar
 import pandas as pd
 import numpy as np
+import shutil
 
+
+def mkdir(path):
+    '''
+    创建路径
+    :param path: 待创建的路径
+    :return: 无
+    '''
+    folder=os.path.exists(path)
+
+    if folder:
+        print("检测到已有路径",path,"!将删除该路径下的所有文件和文件夹!")
+        shutil.rmtree(path)
+
+    os.makedirs(path)
+    print("创建了文件夹", path)
 
 # 合并静态表
+
 
 def get_merge_static_dic(static_dir_path):
     """
@@ -85,11 +102,11 @@ def get_merge_static_dic(static_dir_path):
 
 
 def set2str(tmp_set):
-    '''
+    """
     将一个集合中的相邻两个元素用“#”连接起来，并返回连接后的字符串
     :param tmp_set: 待连接的集合
     :return: tmp_str: 用#连接后的字符串
-    '''
+    """
     tmp_list = list(tmp_set)
     if len(tmp_list) == 1:
         return tmp_list[0]
@@ -101,12 +118,12 @@ def set2str(tmp_set):
 
 
 def save_merge_static_dic(merge_static_dic, save_path):
-    '''
+    """
     保存合并后的静态表
     :param merge_static_dic：key:扇区名；value:扇区包含的所有小区的频段号和CGI编号
     :param save_path: 保存路径
     :return: 无
-    '''
+    """
     with open(save_path, "w", encoding="GBK", newline="") as csvfile:
         writer = csv.writer(csvfile)
         for sector_name in merge_static_dic:

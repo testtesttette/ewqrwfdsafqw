@@ -32,9 +32,11 @@ def data_preprocessing_and_forecast():
 
     # 保存每个扇区清洗结果的路径
     CLEAN_FILE_PATH = cf.glv_get(GlobalVariables.CLEAN_FILE_PATH)
+    mkdir(CLEAN_FILE_PATH)
 
     # 保存每个扇区的小区的负载数据结果的路径
     SAVE_CGI_INFO_PATH=cf.glv_get(GlobalVariables.SAVE_CGI_INFO_PATH)
+    mkdir(SAVE_CGI_INFO_PATH)
 
     # 保存高负荷记录和不能解决的高负荷记录的路径
     SAVE_PATH_HIGHLOAD = cf.glv_get(GlobalVariables.SAVE_PATH_HIGHLOAD)
@@ -90,6 +92,8 @@ def data_preprocessing_and_forecast():
     # 读取所有扇区负载结果的文件
     sector_time_record_dic = get_sector_time_record_dic(clean_file_path_list)
 
+    mkdir(cf.glv_get(GlobalVariables.save_forecast_file_rootdir))
+
     # 根据扇区历史负载预测未来扇区的负载
     # training_days：训练天数
     # testing_days：预测天数
@@ -100,3 +104,5 @@ def data_preprocessing_and_forecast():
     forecast_sector_load(forecast_time_list, sector_time_record_dic, training_days=cf.glv_get(GlobalVariables.training_days), testing_days=cf.glv_get(GlobalVariables.forecast_days),
                          save_forecast_file_rootdir=cf.glv_get(GlobalVariables.save_forecast_file_rootdir),
                          forecast_file_prefix='forecast_', yhat_choice="yhat_upper")
+
+
