@@ -69,7 +69,7 @@ def main():
     from analysis.Test_Main_Gen_Schedule_Input import extend_decrease_by_forecast
     from analysis.Test_Main_Recent_Select import extend_by_recent_feature_extract
     from analysis.Test_Main_Threshold_Select import final_extend_decrease_by_threshold
-    from schedule.schedule import main as sche
+    # from schedule.schedule import main as sche
 
     data_preprocessing_and_forecast()
     extend_decrease_by_forecast()
