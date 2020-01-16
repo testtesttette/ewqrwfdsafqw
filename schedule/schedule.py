@@ -12,35 +12,26 @@ from utils.util import *
 import __config__ as cf
 from __global__ import GlobalVariables
 
-# TODO：静态表怎么筛选，写个程序or人工？
-# 排除扇区直接从静态表中手动筛选即可
+# TODO：排除扇区怎么从静态表中筛选，写个程序or人工？
 # 当前筛选规则：
 #   ‘县市’列为拱墅区
 #   ‘覆盖区域（场景）’列为火车站或高铁或高速公路
 # 将满足条件的行的'小区中文名称'列去重后复制到一个新csv文件即可
 
-# EXCLUDE_SECTORS_FILE_PATH = r''
-# STATIC_FILE_PATH = r'/home/wm775825/达州-0512-0624-数据/静态表/0512-更新-静态表.csv'
-# PATH_PLUS = r'/home/wm775825/达州-0512-0624-数据/DZ_0618_0624_优化结果-加限制/预测扩容扇区/'
-# PATH_REDUCE = r'/home/wm775825/达州-0512-0624-数据/DZ_0618_0624_优化结果-加限制/预测减容扇区/'
-# PATH_BUSY_BEFORE = r'/home/wm775825/达州-0512-0624-数据/DZ_0618_0624_优化结果-加限制/负载平移结果-扩容扇区/'
-# reduce_volume_times = 0.99
-# PATH_OUTPUT = str(reduce_volume_times) + r'p/'
-# 预测开始时间、天数以及对应的小时数
-# START_TIME = '2019-06-18 00:00'
 
-
-# TODO: 修改对应的路径名
+# TODO: 修改对应的变量名
 _EXCLUDE_SECTORS_FILE_PATH = r''
-_PATH_PLUS = cf.glv_get(GlobalVariables.save_threshold_extend_dir)
-_PATH_REDUCE = cf.glv_get(GlobalVariables.save_threshold_decrease_dir)
-_PATH_SCHEDULE = os.path.join(cf.glv_get(GlobalVariables.output_root_dir),
-                              cf.glv_get(GlobalVariables.scheduel_list_dir))
+_PATH_PLUS = os.path.join(cf.glv_get(GlobalVariables.save_threshold_extend_dir),
+                          r'预测结果/设定高负载出现天数不少于5天')
+_PATH_REDUCE = os.path.join(cf.glv_get(GlobalVariables.save_threshold_decrease_dir),
+                            r'按周粒度操作/1')
+_PATH_TRANSLATE = os.path.join(cf.glv_get(GlobalVariables.save_threshold_extend_dir),
+                               r'引入最近历史特征/设定高负载出现天数不少于5天')
+_PATH_SCHEDULE = cf.glv_get(GlobalVariables.schedule_dir)
 _START_TIME = cf.glv_get(GlobalVariables.forecast_start_date)
 _FORECAST_DAY_LENGTH = cf.glv_get(GlobalVariables.forecast_days)
 _FORECAST_HOUR_LENGTH = _FORECAST_DAY_LENGTH * 24
 _REDUCE_VOLUME_FACTOR = cf.glv_get(GlobalVariables.reduce_volume_factor)
-
 
 # fb_vector中各频段先后顺序为:
 # A,D/D1,D2,D3,F1,F2,E1,E2,E3,FDD900,FDD1800,FDD,FDDNB/NB,DCS1800,GSM900
@@ -56,11 +47,11 @@ _FREQUENCY_BAND_INDEX_DICT = {
     # 'DCS1800': 13,
     # 'GSM900': 14
 }
-_FB_LENGTH = len(_FREQUENCY_BAND_INDEX_DICT)
+_FB_LENGTH = max(_FREQUENCY_BAND_INDEX_DICT.values()) + 1
 _FB_LIST = ['D1', 'D2', 'D3', 'F1', 'F2', 'FDD1800', 'A', 'FDD900', 'E1', 'E2', 'E3']
 
 
-def load_need_and_active_data():
+def load_data():
     """
     加载扩减容扇区的需求数据（预测得到）以及现网中的数据
     现网数据与预测数据在同一文件中一并给出，文件名即为扇区名。
@@ -69,55 +60,43 @@ def load_need_and_active_data():
     have_inited = defaultdict(bool)
     need_fb_dict = defaultdict(lambda: np.zeros((_FORECAST_HOUR_LENGTH, _FB_LENGTH), dtype=bool))
     active_fb_dict = defaultdict(lambda: np.zeros(_FB_LENGTH, dtype=bool))
+    busy_before_list = []
 
-    def do_loading(path: str):
+    def do_loading(path: str, now_index: int, need_index: int, label: int):
         time_begin = parse(_START_TIME)
         for file_name in os.listdir(path):
-            # 去掉“.csv”，剩余部分为扇区名
             sector_name = file_name[:-4]
+            if label == 2:
+                busy_before_list.append(sector_name)
             with open(os.path.join(path, file_name), 'r', encoding='gbk') as csvfile:
                 reader = iter(csv.reader(csvfile))
                 next(reader)
                 for line_index, line in enumerate(reader):
-                    # 利用第一行的数据初始化现网数据（因为每一行的该列都是相同的）
-                    # 对于扩减容列表中没有的时刻，其需求数与现网数据相同，可使用现网数据进行填充
                     if line_index == 0:
-                        for fb in line[4].split(','):
+                        for fb in line[now_index].split(','):
                             active_fb_dict[sector_name][_FREQUENCY_BAND_INDEX_DICT[fb]] = True
                         if not have_inited[sector_name]:
-                            for index in range(_FORECAST_HOUR_LENGTH):
-                                need_fb_dict[sector_name][index] = active_fb_dict[sector_name].copy()
+                            for _index in range(_FORECAST_HOUR_LENGTH):
+                                need_fb_dict[sector_name][_index] = active_fb_dict[sector_name].copy()
                             have_inited[sector_name] = True
                     time_now = parse(line[0])
                     time_delta = time_now - time_begin
                     index = time_delta.days * 24 + time_delta.seconds // 3600
-                    temp_vector = np.zeros(_FB_LENGTH, dtype=bool)
-                    for fb in line[2].split(','):
-                        temp_vector[_FREQUENCY_BAND_INDEX_DICT[fb]] = True
-                    need_fb_dict[sector_name][index] = temp_vector.copy()
+                    tmp_vector = np.zeros(_FB_LENGTH, dtype=bool)
+                    for fb in line[need_index].split(','):
+                        tmp_vector[_FREQUENCY_BAND_INDEX_DICT[fb]] = True
+                    if label != 2:
+                        need_fb_dict[sector_name][index] = tmp_vector.copy()
+                    else:
+                        need_fb_dict[sector_name][index] = active_fb_dict[sector_name] | tmp_vector
 
-    do_loading(_PATH_REDUCE)
-    do_loading(_PATH_PLUS)
-    return need_fb_dict, active_fb_dict
-
-
-def load_exclude_sectors():
-    """
-    源扇区不能为高铁站、火车站...
-    :return:
-    """
-    if _EXCLUDE_SECTORS_FILE_PATH == '':
-        return []
-    exclude_list = []
-    with open(_EXCLUDE_SECTORS_FILE_PATH, 'r', encoding="GBK") as csvfile:
-        reader = csv.reader(csvfile)
-        it = iter(reader)
-        for line in it:
-            exclude_list.append(line[0])
-    return exclude_list
+    do_loading(_PATH_PLUS, 4, 2, 0)
+    do_loading(_PATH_REDUCE, 4, 2, 1)
+    do_loading(_PATH_TRANSLATE, 3, 5, 2)
+    return need_fb_dict, active_fb_dict, busy_before_list
 
 
-def schedule(time, need_matrix, current_num_vector, wait_matrix, frozen, exclude_index_list):
+def do_schedule(time, need_matrix, current_num_vector, wait_matrix, frozen, exclude_index_list, busy_index_before_list):
     """
     进行time时刻的调度任务
     :param time: 当前时刻
@@ -126,6 +105,7 @@ def schedule(time, need_matrix, current_num_vector, wait_matrix, frozen, exclude
     :param wait_matrix:
     :param frozen:
     :param exclude_index_list:
+    :param busy_index_before_list:
     :return:
     """
     # 根据各个扇区当前license数量和L小时内变换wait_matrix计算L小时后应该有多少license的列表advance_list
@@ -145,7 +125,7 @@ def schedule(time, need_matrix, current_num_vector, wait_matrix, frozen, exclude
         current = current_num_vector[index]
         # 可能能拆的扇区:
         if load < advance:
-            if index in exclude_index_list:
+            if index in exclude_index_list or index in busy_index_before_list:
                 continue
             # num为某小时该扇区预计绑定的license数
             # min_surplus为某小时多余license的最小值
@@ -193,32 +173,27 @@ def schedule(time, need_matrix, current_num_vector, wait_matrix, frozen, exclude
         source_list.append(item[0])
         advance_needs -= 1
 
-    if advance_needs > 0:
-        raise LicenseLackError(advance_needs)
+    # if advance_needs > 0:
+    #     raise LicenseLackError(advance_needs)
     # 检查current_num_vector数值是否合法
     for x in current_num_vector:
         if x <= 0:
             raise LicenseNumError(x)
 
-    return source_list, dest_list
+    return source_list, dest_list, advance_needs
 
 
 def generate_schedule_list(schedule_type: str, time: str, target_list: list, sector_list: list,
                            schedule_list: list, schedule_fb_dict: dict, active_vector: np.array, init_vector: np.array):
-    schedule_types = []
-    delta = 0
     conditions = lambda vec_a, vec_b, index: vec_a[index] < vec_b[index]
-    less = None
     if schedule_type == '去激活':
         schedule_types = ['减容去激活', '扩容去激活']
         delta = -1
         less = partial(conditions, active_vector, init_vector)
-    elif schedule_type == '激活':
+    else:  # schedule_type == '激活':
         schedule_types = ['扩容激活', '减容激活']
         delta = 1
         less = partial(conditions, init_vector, active_vector)
-    else:
-        pass
 
     flag_dict = defaultdict(int)
     schedule_dict = defaultdict(int)
@@ -239,30 +214,8 @@ def generate_schedule_list(schedule_type: str, time: str, target_list: list, sec
             [time, sector_list[index], schedule_dict[index], schedule_fb_dict[index], schedule_type_dict[index]])
 
 
-def generate_source_list(time: str, target_list: list, sector_list: list,
-                         schedule_list: list, schedule_fb_dict: dict, active_vector: np.array, init_vector: np.array):
-    generate_schedule_list('去激活', time, target_list, sector_list, schedule_list, schedule_fb_dict, active_vector,
-                           init_vector)
-
-
-def generate_dest_list(time: str, target_list: list, sector_list: list,
-                       schedule_list: list, schedule_fb_dict: dict, active_vector: np.array, init_vector: np.array):
-    generate_schedule_list('激活', time, target_list, sector_list, schedule_list, schedule_fb_dict, active_vector,
-                           init_vector)
-
-
 def adapt_fbs(time: int, frozen: int, need_fb_tensor: np.array, active_fb_matrix: np.array, source_list: list,
               dest_list: list):
-    """
-    为调度清单加入具体频段
-    :param time: 当前时刻
-    :param frozen: 禁锢时长，单位为小时
-    :param need_fb_tensor:
-    :param active_fb_matrix:
-    :param source_list:
-    :param dest_list:
-    :return:
-    """
     source_fb_dict = defaultdict(list)
     dest_fb_dict = defaultdict(list)
 
@@ -285,15 +238,15 @@ def adapt_fbs(time: int, frozen: int, need_fb_tensor: np.array, active_fb_matrix
     return source_fb_dict, dest_fb_dict
 
 
-def start_schedule(frozen=4):
+def schedule(frozen=4):
     """
-
-    :param frozen:
+    调度入口
+    :param frozen: 禁锢时长
     :return:
     """
     # 读取预测负载数据、现网数据、平移扇区和排除扇区
-    need_fb_dict, active_fb_dict = load_need_and_active_data()
-    exclude_list = load_exclude_sectors()
+    need_fb_dict, active_fb_dict, busy_before_list = load_data()
+    exclude_set = get_set_from_csv(csv_name=_EXCLUDE_SECTORS_FILE_PATH, index=0)
     # 将扇区名和数据分开存储，调度时只使用索引下标，不使用具体扇区名
     sector_list = list(need_fb_dict.keys())
     need_fb_tensor = np.array(list(need_fb_dict.values()))  # sector * time_len * fb_length
@@ -302,7 +255,8 @@ def start_schedule(frozen=4):
     # 后续准备工作
     need_matrix = need_fb_tensor.sum(axis=2)  # sector * time_len
     active_vector = active_fb_matrix.sum(axis=1)  # sector * 1
-    exclude_index_list = [sector_list.index(sector) for sector in exclude_list if sector in sector_list]
+    exclude_index_list = [sector_list.index(sector) for sector in exclude_set if sector in sector_list]
+    busy_index_before_list = [sector_list.index(sector) for sector in busy_before_list if sector in sector_list]
 
     # 拷贝一份，记录下初始化的数据，用于和调度后的数据进行对比
     init_vector = active_vector.copy()
@@ -317,48 +271,36 @@ def start_schedule(frozen=4):
     # 开始生成调度列表，第一个调度时刻时，下一小时在need_fb_dict对应下标为0（例如调度时刻为00:00,那么下一小时为00：00-01：00），故从0开始
     source_large_list = []
     dest_large_list = []
+    total_advance_needs = 0
     for time in range(global_time_line):
         if time + frozen >= global_time_line:
             break
-        source_list, dest_list = schedule(time, need_matrix, current_num_vector, wait_matrix, frozen,
-                                          exclude_index_list)
+        source_list, dest_list, advance_needs = do_schedule(time, need_matrix, current_num_vector, wait_matrix, frozen,
+                                                            exclude_index_list, busy_index_before_list)
+        total_advance_needs = total_advance_needs + advance_needs
         source_fb_dict, dest_fb_dict = adapt_fbs(time, frozen, need_fb_tensor, active_fb_matrix, source_list, dest_list)
-        generate_source_list(time_list[time], source_large_list, sector_list, source_list, source_fb_dict,
-                             active_vector, init_vector)
-        generate_dest_list(time_list[time], dest_large_list, sector_list, dest_list, dest_fb_dict, active_vector,
-                           init_vector)
-    return source_large_list, dest_large_list
-
-
-def save_large_list2file(large_list, file_name, title_list):
-    with open(file_name, "w", encoding="GBK", newline="") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(title_list)
-        for line in large_list:
-            writer.writerow(line)
-
-
-def find_sector(result_list):
-    sector_set = set()
-    for line in result_list:
-        sector_set.add(line[1])
-    return sector_set
+        generate_schedule_list('去激活', time_list[time], source_large_list, sector_list, source_list, source_fb_dict,
+                               active_vector, init_vector)
+        generate_schedule_list('激活', time_list[time], dest_large_list, sector_list, dest_list, dest_fb_dict,
+                               active_vector, init_vector)
+    return source_large_list, dest_large_list, total_advance_needs
 
 
 def main():
-    source_large_list, dest_large_list = start_schedule()
+    source_large_list, dest_large_list, total_advance_needs = schedule()
     output_dir = _PATH_SCHEDULE
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    save_large_list2file(source_large_list, os.path.join(output_dir, '源扇区.csv'),
-                         ["时间", "去激活扇区", "去激活小区数量", '去激活频段', "去激活类型"])
-    save_large_list2file(dest_large_list, os.path.join(output_dir, '目的扇区.csv'),
-                         ["时间", "激活扇区", "激活小区数量", '激活频段', "激活类型"])
+    save_data2csv(source_large_list, os.path.join(output_dir, '源扇区.csv'),
+                  ["时间", "去激活扇区", "去激活小区数量", '去激活频段', "去激活类型"])
+    save_data2csv(dest_large_list, os.path.join(output_dir, '目的扇区.csv'),
+                  ["时间", "激活扇区", "激活小区数量", '激活频段', "激活类型"])
 
-    source_num = len(find_sector(source_large_list))
-    dest_num = len(find_sector(dest_large_list))
+    source_num = len(get_set_from_list(data_list=source_large_list, index=1))
+    dest_num = len(get_set_from_list(data_list=dest_large_list, index=1))
     print('源扇区{num_1}个，目的扇区{num_2}个，总计{num_3}个'.format(num_1=source_num, num_2=dest_num, num_3=source_num + dest_num))
-    print('-------------------------------------')
+    if total_advance_needs > 0:
+        print('还需要添加' + str(total_advance_needs) + '个license!')
 
 
 if __name__ == '__main__':

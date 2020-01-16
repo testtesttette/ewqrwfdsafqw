@@ -9,7 +9,7 @@ class LicenseLackError(Exception):
         self.num = num
 
     def __str__(self):
-        return 'License lack:' + self.num + '!'
+        return 'License lack:' + str(self.num) + '!'
 
 
 class LicenseNumError(Exception):
